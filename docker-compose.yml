@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb:/data/db
+    networks:
+      - app_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq_prod
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app_network
+
+  movies:
+    build:
+      context: ./movies
+    container_name: movies
+    ports:
+      - "4000:4000"
+    networks:
+      - app_network
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+
+  suggest:
+    build:
+      context: ./suggest
+    container_name: suggest
+    ports:
+      - "8000:8000"
+    networks:
+      - app_network
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+
+  random_movies:
+    build:
+      context: ./random_movies
+    container_name: random_movies
+    ports:
+      - "4141:4141"
+    networks:
+      - app_network
+    depends_on:
+      - movies
+    environment:
+      - MOVIES_API=http://movies:4000
+
+  web:
+    build:
+      context: ./web
+    container_name: web
+    ports:
+      - "3000:3000"
+    networks:
+      - app_network
+    depends_on:
+      - random_movies
+    environment:
+      - API_URL=http://localhost:4141
+
+  record:
+    build:
+      context: ./record
+    container_name: record
+    ports:
+      - "3010:3010"
+    networks:
+      - app_network
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+
+volumes:
+  mongodb:
+
+networks:
+  app_network:
+    driver: bridge
