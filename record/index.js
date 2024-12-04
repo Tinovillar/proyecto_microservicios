@@ -30,20 +30,15 @@ async function sendToQueue(message) {
 }
 
 app.post('/viewed', async (req, res) => {
-    const { movieId, movieTitle } = req.body;
-  
-    if (!movieId || !movieTitle) {
-      return res.status(400).send({ error: 'Missing required fields' });
-    }
-  
-    movieRecord.push(req.body);
 
-    console.log(movieRecord);
-  
-    const message = JSON.stringify({ movieId, movieTitle });
+  req.body.forEach(async (movie) => {
+    const message = JSON.stringify({ id: movie.id, title: movie.title, year: movie.year, poster: movie.poster, plot: movie.plot });
+    console.log(message);
     await sendToQueue(message);
+    movieRecord.push(movie);
+  });
   
-    res.send({ message: 'Movie added to history and sent to queue', data: { movieId, movieTitle } });
+  res.send({ message: 'Movies recorded'});
 });
   
 const PORT = 3010;
